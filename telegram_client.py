@@ -7,6 +7,8 @@ import re
 from telethon import TelegramClient, events
 from typing import Optional, Callable
 import logging
+import subprocess
+import shutil
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,17 +130,50 @@ class TelegramGrammarBot:
 
     
     def _parse_response(self, response: str) -> dict:
-        """Parse the bot's response and extract JSON."""
-        # Remove "RESPONSE:" prefix
-        json_text = response[len("RESPONSE:"):].strip()
-        
+        """Parse the bot's response and extract JSON, then copy corrected_text to clipboard."""
+
+        def _copy_to_clipboard(text: str) -> None:
+            """Copy text to clipboard on Ubuntu (X11/Wayland). Best-effort; never raises."""
+            if not text:
+                return
+
+            candidates = [
+                (["wl-copy"], None),                      # Wayland
+                (["xclip", "-selection", "clipboard"], None),  # X11
+                (["xsel", "--clipboard", "--input"], None),     # X11
+            ]
+
+            for cmd, _ in candidates:
+                exe = cmd[0]
+                if shutil.which(exe):
+                    try:
+                        subprocess.run(
+                            cmd,
+                            input=text,
+                            text=True,
+                            check=True,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
+                        return
+                    except Exception:
+                        continue
+
+        # Remove "RESPONSE:" prefix (if present)
+        prefix = "RESPONSE:"
+        json_text = response[len(prefix):].strip() if response.startswith(prefix) else response.strip()
+
         # Remove markdown code blocks if present
-        json_text = re.sub(r'^```json\s*', '', json_text)
+        json_text = re.sub(r'^\s*```json\s*', '', json_text)
+        json_text = re.sub(r'^\s*```\s*', '', json_text)
         json_text = re.sub(r'\s*```$', '', json_text)
         json_text = json_text.strip()
-        
+
         try:
-            return json.loads(json_text)
+            data = json.loads(json_text)
+            corrected_text = data.get("corrected_text", "")
+            _copy_to_clipboard(corrected_text if isinstance(corrected_text, str) else str(corrected_text))
+            return data
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON: {e}")
             logger.error(f"Response was: {json_text}")
