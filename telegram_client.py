@@ -82,38 +82,50 @@ class TelegramGrammarBot:
             logger.error("Timeout waiting for bot response")
             raise Exception("Bot did not respond in time")
     
+    
     def _build_prompt(self, text: str) -> str:
         """Build the full prompt with the user's text inserted."""
-        return f"""You are an English-language teacher. When I send you a sentence or short text in English, your job is to:
-                    1. Correct all grammar, spelling, and phrasing errors.
-                    2. Provide the corrected version of the sentence at the top.
-                    3. Then explain **where my sentence was wrong**, showing the incorrect parts and their correct forms.
-                    4. Explain **the grammar rules** behind each correction (e.g., when to use present perfect, how to form a question, word order, article usage, etc.).
-                    5. Keep your explanations **short, structured, and clear** — avoid unnecessary details.
-                    6. Analyze the sentence based on the meaning I intended, and explain how correct English grammar should express that meaning.
+        return f"""You are an English-language teacher and translator.
 
-                    Your entire response must:
-                    * Start with: **RESPONSE:**
-                    * Contain **only valid JSON** after that
-                    * Use the exact structure below:
+            First, detect the input language:
+            - If the input is **Persian (Farsi)**: translate it to natural, correct **English** and respond with **ONLY** the JSON format below (no extra keys). In this case, set "error_analysis" to an empty array [].
+            - If the input is **English**: correct grammar, spelling, punctuation, and phrasing, and then explain the corrections with grammar rules. Also provide a **Persian translation of the corrected English**.
 
-                    ```json
-                    {{
-                    "corrected_text": "...",
-                    "error_analysis": [
-                        {{
-                        "original": "...",
-                        "corrected": "...",
-                        "explanation": "..."
-                        }}
-                    ]
-                    }}
-                    ```
+            For English input, your job is to:
+            1. Provide the corrected English sentence/text as "corrected_text".
+            2. Provide the Persian translation of "corrected_text" as "persian_translation".
+            3. Explain each correction in "error_analysis", showing:
+            - the incorrect part ("original"),
+            - the corrected part ("corrected"),
+            - a short, clear explanation ("explanation") that includes the **grammar rule** (name the rule and briefly state it), plus a minimal example if helpful.
 
-                    Here is the text you should analyze and correct:
-                    ```
-                    {text}
-                    ```"""
+            Guidelines for explanations:
+            - Be concise but more grammar-focused than usual.
+            - Use clear rule names (e.g., Subject–Verb Agreement, Articles (a/an/the), Tense consistency, Prepositions, Word order, Countable vs. uncountable nouns, Parallel structure, Punctuation, Collocations).
+            - Prefer 1–3 sentences per explanation; avoid long lectures.
+            - If nothing is wrong, still return the JSON, with "error_analysis": [].
+
+            Your entire response must:
+            * Start with: **RESPONSE:**
+            * Contain **only valid JSON** after that (no markdown, no backticks)
+            * Use the exact structure below (always include all keys):
+
+            {{
+            "corrected_text": "...",
+            "persian_translation": "...",
+            "error_analysis": [
+                {{
+                "original": "...",
+                "corrected": "...",
+                "explanation": "..."
+                }}
+            ]
+            }}
+
+            Here is the text:
+            {text}"""
+
+
     
     def _parse_response(self, response: str) -> dict:
         """Parse the bot's response and extract JSON."""

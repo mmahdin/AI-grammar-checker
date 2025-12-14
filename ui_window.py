@@ -2,14 +2,13 @@
 UI module for displaying grammar correction results using PySide6.
 """
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, 
+    QApplication, QMainWindow, QWidget, QVBoxLayout,
     QTextEdit, QLabel, QPushButton, QScrollArea
 )
 from PySide6.QtCore import Qt, Signal, QObject
-from PySide6.QtGui import QFont, QTextCursor
+from PySide6.QtGui import QFont
 import sys
 from typing import Optional
-
 
 
 class ResultSignal(QObject):
@@ -21,14 +20,14 @@ class GrammarResultWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Grammar Check Results")
-        self.setMinimumSize(700, 500)
+        self.setMinimumSize(700, 560)  # a bit taller for Persian translation
         self.setup_ui()
 
     def closeEvent(self, event):
         """Keep the app running when the window is closed; just hide it."""
         event.ignore()
         self.hide()
-        
+
     def setup_ui(self):
         """Setup the user interface."""
         # Central widget
@@ -37,7 +36,7 @@ class GrammarResultWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
-        
+
         # Title
         title = QLabel("Grammar Correction Results")
         title_font = QFont()
@@ -45,15 +44,16 @@ class GrammarResultWindow(QMainWindow):
         title_font.setBold(True)
         title.setFont(title_font)
         layout.addWidget(title)
-        
+
+        section_font = QFont()
+        section_font.setPointSize(11)
+        section_font.setBold(True)
+
         # Corrected text section
         corrected_label = QLabel("✓ Corrected Text:")
-        corrected_font = QFont()
-        corrected_font.setPointSize(11)
-        corrected_font.setBold(True)
-        corrected_label.setFont(corrected_font)
+        corrected_label.setFont(section_font)
         layout.addWidget(corrected_label)
-        
+
         self.corrected_text = QTextEdit()
         self.corrected_text.setReadOnly(True)
         self.corrected_text.setMaximumHeight(100)
@@ -67,12 +67,32 @@ class GrammarResultWindow(QMainWindow):
             }
         """)
         layout.addWidget(self.corrected_text)
-        
+
+        # Persian translation section (NEW)
+        persian_label = QLabel("🇮🇷 Persian Translation:")
+        persian_label.setFont(section_font)
+        layout.addWidget(persian_label)
+
+        self.persian_translation = QTextEdit()
+        self.persian_translation.setReadOnly(True)
+        self.persian_translation.setMaximumHeight(100)
+        self.persian_translation.setStyleSheet("""
+            QTextEdit {
+                background-color: #2b2b2b;
+                border: 2px solid #9c27b0;
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 12pt;
+                color: #ffffff;
+            }
+        """)
+        layout.addWidget(self.persian_translation)
+
         # Errors section
         errors_label = QLabel("📝 Error Analysis:")
-        errors_label.setFont(corrected_font)
+        errors_label.setFont(section_font)
         layout.addWidget(errors_label)
-        
+
         # Scroll area for errors
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -82,13 +102,13 @@ class GrammarResultWindow(QMainWindow):
                 border-radius: 5px;
             }
         """)
-        
+
         self.errors_widget = QWidget()
         self.errors_layout = QVBoxLayout(self.errors_widget)
         self.errors_layout.setSpacing(10)
         scroll.setWidget(self.errors_widget)
         layout.addWidget(scroll)
-        
+
         # Close button
         close_btn = QPushButton("Close")
         close_btn.setMaximumWidth(100)
@@ -107,12 +127,19 @@ class GrammarResultWindow(QMainWindow):
         """)
         close_btn.clicked.connect(self.close)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
-    
+
     def display_result(self, result: dict):
         """Display grammar check result."""
         # Show corrected text
         corrected = result.get('corrected_text', 'No correction available')
         self.corrected_text.setText(corrected)
+
+        # Show Persian translation (NEW)
+        persian = result.get('persian_translation', '')
+        if persian:
+            self.persian_translation.setText(persian)
+        else:
+            self.persian_translation.setText("")
 
         # Clear previous errors (widgets + spacers)
         while self.errors_layout.count():
@@ -120,6 +147,7 @@ class GrammarResultWindow(QMainWindow):
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
+            # spacer items have no widget; taking them out is enough
 
         # Display errors
         errors = result.get('error_analysis', [])
@@ -146,7 +174,6 @@ class GrammarResultWindow(QMainWindow):
         self.activateWindow()
         self.raise_()
 
-    
     def _create_error_widget(self, idx: int, error: dict) -> QWidget:
         """Create a widget for displaying a single error."""
         widget = QWidget()
@@ -158,10 +185,10 @@ class GrammarResultWindow(QMainWindow):
                 padding: 10px;
             }
         """)
-        
+
         layout = QVBoxLayout(widget)
         layout.setSpacing(8)
-        
+
         # Error number
         num_label = QLabel(f"Error #{idx}")
         num_font = QFont()
@@ -169,25 +196,25 @@ class GrammarResultWindow(QMainWindow):
         num_font.setPointSize(12)
         num_label.setFont(num_font)
         layout.addWidget(num_label)
-        
+
         # Original text
         original = QLabel(f"❌ Original: {error.get('original', 'N/A')}")
         original.setWordWrap(True)
         original.setStyleSheet("color: #d32f2f; font-size: 12pt;")
         layout.addWidget(original)
-        
+
         # Corrected text
         corrected = QLabel(f"✓ Corrected: {error.get('corrected', 'N/A')}")
         corrected.setWordWrap(True)
         corrected.setStyleSheet("color: #388e3c; font-size: 12pt;")
         layout.addWidget(corrected)
-        
+
         # Explanation
         explanation = QLabel(f"💡 {error.get('explanation', 'N/A')}")
         explanation.setWordWrap(True)
         explanation.setStyleSheet("color: #ffffff; font-size: 11pt; margin-top: 5px;")
         layout.addWidget(explanation)
-        
+
         return widget
 
 
@@ -197,7 +224,7 @@ class UIManager:
         self.app: Optional[QApplication] = None
         self.window: Optional[GrammarResultWindow] = None
         self.signal = ResultSignal()
-        
+
     def initialize(self):
         """Initialize QApplication."""
         if not QApplication.instance():
@@ -207,14 +234,14 @@ class UIManager:
 
         # Keep background services alive even if the window closes.
         self.app.setQuitOnLastWindowClosed(False)
-        
+
         self.window = GrammarResultWindow()
         self.signal.show_result.connect(self._show_result)
-    
+
     def show_result(self, result: dict):
         """Thread-safe method to show result."""
         self.signal.show_result.emit(result)
-    
+
     def _show_result(self, result: dict):
         """Internal method to display result (runs in UI thread)."""
         if self.window:

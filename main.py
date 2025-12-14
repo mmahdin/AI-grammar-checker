@@ -55,7 +55,7 @@ class GrammarCheckerApp:
             
             # Check grammar using Telegram bot with configured timeout
             result = await self.telegram_bot.check_grammar(text, timeout=self.timeout)
-            
+            print(result)
             # Display result in UI
             self.ui_manager.show_result(result)
             
