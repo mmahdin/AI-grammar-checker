@@ -1,0 +1,28 @@
+# Configuration file for Grammar Checker
+# Copy this to config.yaml and fill in your values
+
+telegram:
+  # Get these from https://my.telegram.org/apps
+  api_id: 1
+  api_hash: "1"
+  
+  # Username of the AI bot you want to use
+  # Examples: @ChatGPTbot, @ClaudeAI_bot, etc.
+  bot_username: "@GPT4Telegrambot"
+  # bot_username: "@CopilotOfficialBot"
+  # bot_username: "@s3epidee"
+  
+  # Session name (will create a session file)
+  session_name: "session"
+
+  proxy_type: "socks5"
+  proxy_ip: "127.0.0.1"
+  proxy_port: 10808
+
+server:
+  # Local server configuration
+  host: "127.0.0.1"
+  port: 8765
+  
+  # Timeout for bot responses (seconds)
+  timeout: 30

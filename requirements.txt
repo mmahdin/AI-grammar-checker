@@ -1,0 +1,4 @@
+telethon>=1.34.0
+aiohttp>=3.9.0
+PySide6>=6.6.0
+PyYAML>=6.0.1
